@@ -1,7 +1,50 @@
+import time
 import cv2
 import mediapipe as mp
 from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
+
+
+def get_hand_points(hand, frame):
+    h, w = frame.shape[:2]
+    # landmark normalized 좌표를 화면 픽셀 좌표로 변환
+    return [(int(p.x * w), int(p.y * h)) for p in hand]
+
+
+def count_fingers(points, hand_label):
+    # 손가락 끝과 손가락 중간 관절 인덱스
+    tip_ids = (4, 8, 12, 16, 20)
+    pip_ids = (3, 6, 10, 14, 18)
+    status = []
+
+    for tip_id, pip_id in zip(tip_ids, pip_ids):
+        tip = points[tip_id]
+        pip = points[pip_id]
+
+        if tip_id == 4:
+            # 엄지손가락은 왼손/오른손 방향에 따라 x 비교
+            if hand_label == "Right":
+                status.append(tip[0] < pip[0])
+            else:
+                status.append(tip[0] > pip[0])
+        else:
+            # 나머지 손가락은 y 좌표로 펴짐 여부 판단
+            status.append(tip[1] < pip[1])
+
+    return status
+
+
+def get_gesture_name(finger_status):
+    count = sum(finger_status)
+    if count == 0:
+        return "Fist"
+    if count == 5:
+        return "Open palm"
+    if finger_status[1] and not any([finger_status[i] for i in [0, 2, 3, 4]]):
+        return "Point"
+    if finger_status[0] and not any(finger_status[1:]):
+        return "Thumbs"
+    return f"{count} fingers"
 
 
 base_option = python.BaseOptions(model_asset_path="src/models/MediaPipe/hand_landmarker.task")  # 모델 경로 지정하는 옵션
@@ -28,8 +71,6 @@ while True:
 
     if not ret:
         break
-    if cv2.waitKey(1) & 0xFF == ord("q"):
-        break
 
     # 이미지 좌우 반전 및 RGB로 색공간 변환 (전처리)
     frame = cv2.flip(frame, 0)
@@ -44,20 +85,43 @@ while True:
     cv2.putText(frame, " / ".join(labels), (20,70), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0,255,255), 2)
 
     # 탐지 결과의 각 손마다 선과 점 그리기
-    for hand in result.hand_landmarks:
-        h, w = frame.shape[:2]  # 프레임 높이와 너비
-        points = [(int(p.x * w), int(p.y * h)) for p in hand]  # 프레임 높이와 너비 길이 기준 각 landmark 좌표
+    for hand, label in zip(result.hand_landmarks, labels):
+        points = get_hand_points(hand, frame)
 
-        # landmark를 연결하는 선 (skeleton) 그리기
+        # 손 skeleton 그리기
         for c in connections:
             cv2.line(frame, points[c.start], points[c.end], (0,255,0), 2)
 
-        # 각 관절 (landmark)에 점 그리기 (손가락 끝은 빨간 점, 그 외에는 파란 점)
+        # landmark 지점 표시
         for i, point in enumerate(points):
             color = (0,0,255) if i in finger_tips else (255,0,0)
             cv2.circle(frame, point, 6 if i in finger_tips else 4, color, -1)
 
+        # 손가락 펴짐 상태와 제스처 이름 계산
+        finger_status = count_fingers(points, label)
+        gesture_name = get_gesture_name(finger_status)
+        finger_count = sum(finger_status)
+
+        # 손 영역을 감싸는 사각형 계산
+        x_min = min(p[0] for p in points)
+        y_min = min(p[1] for p in points)
+        x_max = max(p[0] for p in points)
+        y_max = max(p[1] for p in points)
+
+        cv2.rectangle(frame, (x_min - 10, y_min - 10), (x_max + 10, y_max + 10), (255,255,0), 2)
+        cv2.putText(frame, f"{label}: {gesture_name}", (x_min, max(y_min - 15, 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255,255,0), 2)
+        cv2.putText(frame, f"Fingers: {finger_count}", (x_min, y_max + 25), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255,255,0), 2)
+
     cv2.imshow("MediaPipe Hand Detection", frame)
+
+    # q 누르면 종료, s 누르면 현재 화면 저장
+    key = cv2.waitKey(1) & 0xFF
+    if key == ord("q"):
+        break
+    if key == ord("s"):
+        filename = f"hand_capture_{int(time.time())}.png"
+        cv2.imwrite(filename, frame)
+        print(f"Saved screenshot: {filename}")
 
 hand_detector.close()
 cap.release()
