@@ -8,7 +8,7 @@ from mediapipe.tasks.python import vision
 def get_hand_points(hand, frame):
     h, w = frame.shape[:2]
     # landmark normalized 좌표를 화면 픽셀 좌표로 변환
-    return [(int(p.x * w), int(p.y * h)) for p in hand]
+    return [(int(p.x * w), int(p.y * h)) for p in hand] 
 
 
 def count_fingers(points, hand_label):
