@@ -1,1 +1,8 @@
 .venv/
+
+# Downloaded CIFAR-10 dataset (recreated automatically by torchvision)
+/src/datasets/cifar-10-batches-py/
+/src/datasets/cifar-10-python.tar.gz
+
+# Generated CIFAR-10 model checkpoints (keep src/models/CIFAR10/.gitkeep)
+/src/models/CIFAR10/*.pth
