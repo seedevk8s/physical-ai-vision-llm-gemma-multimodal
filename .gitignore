@@ -12,3 +12,27 @@
 __pycache__/
 summary_memory.json
 openai_summary_memory.json
+
+# Generated dataset cache
+*.cache
+/src/datasets/calibration/images/
+/src/datasets/calibration/labels/
+
+# Downloaded LLM and multimodal models
+/src/models/Gemma4/*.gguf
+
+# Downloaded Piper voices
+/src/models/Piper/*.onnx
+/src/models/Piper/*.onnx.json
+
+# Hardware-specific TensorRT engines
+/src/models/YOLO/*.engine
+
+# Generated model cache
+/src/models/YOLO/*.cache
+
+# Recorded and generated audio
+/src/audio/*.wav
+
+# Locally cloned/build dependency
+/whisper.cpp/
