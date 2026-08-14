@@ -1,4 +1,5 @@
 .venv/
+.env
 
 # Downloaded CIFAR-10 dataset (recreated automatically by torchvision)
 /src/datasets/cifar-10-batches-py/
@@ -6,3 +7,8 @@
 
 # Generated CIFAR-10 model checkpoints (keep src/models/CIFAR10/.gitkeep)
 /src/models/CIFAR10/*.pth
+
+# Local chatbot runtime files
+__pycache__/
+summary_memory.json
+openai_summary_memory.json
